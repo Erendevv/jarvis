@@ -104,7 +104,27 @@ Copy-Item .env.example .env
 Varsayılanlar çoğu kurulumda çalışır; `.env`'i açman şart değil.
 GPU'n yoksa `WHISPER_DEVICE=cpu` ve `WHISPER_COMPUTE_TYPE=int8` yap.
 
-### 3. Doğrula
+### 3. ZIP indirdiysen: dosyaların damgasını kaldır
+
+Depoyu `git clone` ile aldıysan bu adımı atla.
+
+GitHub'dan ZIP indirdiysen Windows tüm dosyalara "internetten geldi" damgası
+(Mark of the Web) basar ve `run.ps1` çalışmaz:
+
+```
+run.ps1 cannot be loaded. The file is not digitally signed.
+```
+
+Çözüm çalıştırma politikasını düşürmek değil, damgayı kaldırmak:
+
+```powershell
+Get-ChildItem -Recurse -File | Unblock-File
+```
+
+Bu yalnızca bu klasördeki dosyaları etkiler, sistem güvenlik ayarına
+dokunmaz.
+
+### 4. Doğrula
 
 ```powershell
 .\.venv\Scripts\python.exe -m jarvis.selftest
@@ -470,6 +490,7 @@ sonradan görme imkânını kapatmaz.
 | Konuşma bitince uzun bekliyor | `VAD_SILENCE_MS` değerini 600'e düşür |
 | Konuşmayı hiç algılamıyor ("Konuşma algılanmadı") | `VAD_THRESHOLD` değerini 0.15'e düşür |
 | Türkçe sesli yanıt İngilizce aksanlı | `TTS_ENGINE=edge` olduğundan emin ol (`sapi` Türkçe dil paketi ister) |
+| `run.ps1 cannot be loaded ... not digitally signed` | ZIP'ten çıkan dosyalarda "internetten geldi" damgası var. Proje klasöründe `Get-ChildItem -Recurse -File \| Unblock-File`. Alternatif: `run.ps1` yerine doğrudan `.\.venv\Scripts\python.exe -m jarvis` |
 | `claude CLI` bulunamadı | `npm install -g @anthropic-ai/claude-code`, sonra bir kez `claude` çalıştırıp oturum aç |
 | Çok fazla onay soruyor | Bkz. [Onay ayarları](#onay-ayarları--nasıl-gevşetilir). Kısası: `.env` içinde `APPROVAL_LEVEL=critical` |
 | Belirli bir araç için hiç sormasın | `.env` içinde `ALWAYS_ALLOW=<araç adı>`. Araç adını `logs/audit-*.jsonl` içinden kopyala |
