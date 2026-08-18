@@ -169,6 +169,54 @@ Yönetici hakkı **gerekmez**.
 
 ---
 
+## Gizlilik — hangi veri makineden çıkıyor
+
+Bunu net yazmak önemli, çünkü "yerel çalışıyor" cümlesi yalnızca yarı doğru.
+
+**Sesin makineden çıkmaz.** Uyandırma kelimesi, konuşma algılama ve konuşma
+tanıma tamamen yerel modellerle çalışır. Mikrofon kaydı diske bile yazılmaz.
+
+**Ama karar veren model uzakta.** Komutun yazıya çevrildikten sonra Claude'a
+gider, ve modelin görmesi gereken her şey onunla birlikte gider.
+
+| Veri | Ağa çıkar mı | Nereye |
+|---|---|---|
+| Mikrofon sesi | hayır | — |
+| Uyandırma kelimesi, VAD, konuşma tanıma | hayır | — |
+| Denetim günlüğü | hayır | — |
+| HUD arayüzü | hayır | yalnızca `127.0.0.1` |
+| Komutun metni | **evet** | Anthropic |
+| **Ekran görüntüleri** | **evet** | Anthropic |
+| Okunan dosyaların içeriği | **evet** | Anthropic |
+| Hafıza notların (`memory/*.md`) | **evet** | Anthropic — her oturum başında |
+| Son 6 konuşma turu | **evet** | Anthropic — her oturum başında |
+| Sesli yanıtın metni | **evet** | Microsoft (`TTS_ENGINE=sapi` ile kesilir) |
+| Model dosyaları | **evet** | Hugging Face — yalnızca ilk kurulumda |
+
+### Ekran görüntüleri hakkında bilinmesi gerekenler
+
+- **Ne çekilir:** ekranın o anki görüntüsü — gözünle gördüğün her şey.
+  Üstü örtülü pencereler, küçültülmüş uygulamalar ve tarayıcının aktif
+  olmayan sekmeleri çekilmez.
+- **Varsayılan tüm ekranlardır.** Birden fazla monitörün varsa
+  `monitor=0` hepsini birleştirir. Bakmadığın ikinci ekran da çekilir.
+- **Diskte kalır.** Görüntüler `logs/screenshots/` altına yazılır ve
+  otomatik silinmez. Ne çekildiğini sonradan görebilmen için böyle, ama
+  bu klasörü düzenli temizlemek sana kalmış.
+- **Bu yüzden `MEDIUM`.** Varsayılan `APPROVAL_LEVEL=medium` ile her ekran
+  görüntüsü onayına düşer. `critical` veya `none` seçersen bu onay kalkar
+  ve Jarvis sormadan ekran çekebilir.
+
+Hassas bir şey açıkken ekran görüntüsü aldırma; parola yöneticisi, bankacılık
+sekmesi veya özel yazışma açıkken bu kareler hem diskine yazılır hem modele
+gider. Görüntüleri temizlemek için:
+
+```powershell
+Remove-Item -Recurse -Force .\logs\screenshots
+```
+
+---
+
 ## Bilgisayar kontrolü
 
 Jarvis'in masaüstünde yapabildikleri. Hepsi `jarvis/desktop/` altında ve
