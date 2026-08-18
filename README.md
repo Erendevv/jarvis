@@ -457,8 +457,8 @@ yerleşik sesini kullanabilir, paketi hiç kurmayabilirsin.
 ## Sıradaki aşamalar
 
 - **Google Calendar ve Gmail** (salt okuma OAuth): "bugünkü takvimimi oku",
-  önemli mail özeti, ihmal edilen kişiler. Senin ilk listendeki üç madde
-  buna bağlı; bunlar olmadan Jarvis kişisel hayatına dair bir şey bilmez.
+  önemli mail özeti, günlerdir yanıtlanmamış kişileri hatırlatma. Bunlar
+  olmadan Jarvis takvim ve yazışmalarına dair hiçbir şey bilmez.
 - **Playwright** ile tarayıcı otomasyonu: form doldurma, sekme yönetimi,
   oturum açık sitelerden bilgi çekme.
 - **Proje takibi**: `memory/projects.md` içindeki klasörleri tarayıp durum
