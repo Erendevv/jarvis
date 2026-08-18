@@ -1,0 +1,37 @@
+# Kimlik bilgileri - asla commit edilmez
+.env
+.env.local
+*.key
+*.pem
+credentials.json
+token.json
+client_secret*.json
+
+# Loglar ve durum
+logs/
+state.db
+state.db-journal
+*.lock
+*.pid
+
+# Kisisel hafiza notlari. Ilk calistirmada sablonlari kendisi olusturur;
+# icerigi kullaniciya ozeldir, depoya girmez.
+memory/
+
+# Modeller ve önbellek
+models/
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Playwright profili (Aşama 4)
+browser-profile/
+
+# İşletim sistemi
+Thumbs.db
+desktop.ini

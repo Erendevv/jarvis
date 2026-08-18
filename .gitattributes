@@ -1,0 +1,9 @@
+# Depoda LF, Windows calisma kopyasinda CRLF.
+* text=auto
+
+# PowerShell betikleri Windows'ta CRLF olmali.
+*.ps1 text eol=crlf
+
+# Ikili dosyalar donusturulmesin.
+*.png binary
+*.onnx binary

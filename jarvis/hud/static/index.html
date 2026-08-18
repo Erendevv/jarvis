@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JARVIS</title>
+<style>
+  :root {
+    --bg: #03070f;
+    --panel: rgba(10, 28, 48, 0.55);
+    --edge: rgba(64, 196, 255, 0.35);
+    --cyan: #4fd6ff;
+    --cyan-dim: #1c7fa8;
+    --warn: #ffb340;
+    --danger: #ff5a5a;
+    --ok: #4dffa6;
+    --text: #cfeeff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Consolas", monospace;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 300px 1fr 340px;
+    grid-template-rows: 56px 1fr 200px;
+    gap: 12px;
+    padding: 12px;
+  }
+  /* Arka plan ızgara ve vinyet */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(20,90,140,0.30), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(79,214,255,0.045) 0 1px, transparent 1px 44px),
+      repeating-linear-gradient(90deg, rgba(79,214,255,0.045) 0 1px, transparent 1px 44px);
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75));
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    padding: 12px 14px;
+    backdrop-filter: blur(3px);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Köşe çentikleri */
+  .panel::before, .panel::after {
+    content: ""; position: absolute; width: 12px; height: 12px;
+    border: 1px solid var(--cyan); opacity: .8;
+  }
+  .panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .panel::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+  h2 {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--cyan-dim); margin-bottom: 10px; font-weight: 600;
+  }
+
+  /* --- üst şerit --- */
+  #topbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 18px;
+  }
+  #brand { font-size: 20px; letter-spacing: 10px; color: var(--cyan); text-shadow: 0 0 14px rgba(79,214,255,.7); }
+  #phase {
+    font-size: 13px; letter-spacing: 4px; text-transform: uppercase;
+    padding: 5px 16px; border: 1px solid var(--edge); border-radius: 2px;
+    color: var(--cyan); transition: all .25s;
+  }
+  #phase.aktif { background: rgba(79,214,255,.14); box-shadow: 0 0 18px rgba(79,214,255,.35); }
+  #clock { margin-left: auto; font-size: 14px; letter-spacing: 2px; color: var(--cyan-dim); }
+  #conn { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 10px currentColor; }
+
+  /* --- sistem paneli --- */
+  .gauge { margin-bottom: 14px; }
+  .gauge .row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; letter-spacing: 1px; }
+  .gauge .track { height: 6px; background: rgba(79,214,255,.10); border-radius: 3px; overflow: hidden; }
+  .gauge .fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan-dim), var(--cyan)); transition: width .5s; box-shadow: 0 0 10px rgba(79,214,255,.6); }
+  .gauge .fill.hot { background: linear-gradient(90deg, #a85c1c, var(--warn)); }
+
+  /* --- reaktör --- */
+  #core { display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; background: none; }
+  #core::before, #core::after { display: none; }
+  #reactor { width: min(52vh, 460px); height: min(52vh, 460px); }
+  #heard {
+    margin-top: 18px; font-size: 19px; text-align: center; min-height: 30px;
+    max-width: 80%; color: #eaf9ff; text-shadow: 0 0 12px rgba(79,214,255,.45);
+  }
+  #reply { margin-top: 8px; font-size: 14px; text-align: center; max-width: 82%; color: var(--cyan-dim); line-height: 1.5; }
+
+  /* --- aktivite --- */
+  #activity { overflow-y: auto; }
+  .act {
+    font-size: 11px; padding: 6px 8px; margin-bottom: 5px;
+    border-left: 2px solid var(--cyan-dim); background: rgba(79,214,255,.05);
+    display: flex; gap: 8px; align-items: baseline;
+  }
+  .act .t { color: var(--cyan-dim); font-size: 10px; }
+  .act.LOW { border-color: var(--cyan-dim); }
+  .act.MEDIUM { border-color: var(--warn); }
+  .act.HIGH, .act.CRITICAL { border-color: var(--danger); }
+
+  /* --- log --- */
+  #log { grid-column: 1 / -1; overflow-y: auto; font-size: 12px; line-height: 1.7; }
+  .line { display: flex; gap: 10px; }
+  .line .ts { color: rgba(79,214,255,.35); flex-shrink: 0; }
+  .line .kind { width: 92px; flex-shrink: 0; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; padding-top: 2px; }
+  .k-wake { color: var(--cyan); } .k-heard { color: #fff; }
+  .k-speak { color: var(--ok); } .k-action { color: var(--warn); }
+  .k-approval, .k-approval_result { color: var(--ok); }
+  .k-denied { color: var(--danger); } .k-approval_request { color: var(--warn); }
+  .k-error { color: var(--danger); } .k-info, .k-phase { color: var(--cyan-dim); }
+  .line .msg { word-break: break-word; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(79,214,255,.25); border-radius: 3px; }
+
+  /* --- onay ekranı --- */
+  #approval {
+    position: fixed; inset: 0; z-index: 50; display: none;
+    background: rgba(2,6,12,.86); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  #approval.show { display: flex; }
+  #approval .box {
+    width: min(680px, 90vw); border: 1px solid var(--danger); border-radius: 4px;
+    background: rgba(20,8,10,.92); padding: 28px 32px;
+    box-shadow: 0 0 60px rgba(255,90,90,.28);
+  }
+  #approval h3 { font-size: 13px; letter-spacing: 5px; color: var(--danger); margin-bottom: 6px; }
+  #ap-risk { font-size: 11px; letter-spacing: 2px; color: var(--warn); margin-bottom: 16px; }
+  #ap-detail {
+    font-size: 12px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,90,90,.25);
+    padding: 12px; border-radius: 3px; max-height: 260px; overflow: auto;
+    white-space: pre-wrap; word-break: break-word; color: #ffd9d9; line-height: 1.5;
+  }
+  #ap-phrase { margin-top: 14px; display: none; }
+  #ap-phrase input {
+    width: 100%; padding: 10px; background: rgba(0,0,0,.5); color: #fff;
+    border: 1px solid var(--danger); border-radius: 3px; font-family: inherit; font-size: 14px;
+  }
+  #ap-phrase label { font-size: 11px; color: var(--warn); display: block; margin-bottom: 6px; }
+  .buttons { display: flex; gap: 12px; margin-top: 20px; align-items: center; }
+  button {
+    flex: 1; padding: 13px; font-family: inherit; font-size: 13px; letter-spacing: 2px;
+    text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all .15s;
+  }
+  #ap-yes { background: rgba(77,255,166,.12); border: 1px solid var(--ok); color: var(--ok); }
+  #ap-yes:hover:not(:disabled) { background: rgba(77,255,166,.28); }
+  #ap-yes:disabled { opacity: .3; cursor: not-allowed; }
+  #ap-no { background: rgba(255,90,90,.12); border: 1px solid var(--danger); color: var(--danger); }
+  #ap-no:hover { background: rgba(255,90,90,.28); }
+  #ap-timer { font-size: 22px; color: var(--warn); min-width: 58px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="topbar" class="panel">
+  <div id="conn" title="bağlantı"></div>
+  <div id="brand">JARVIS</div>
+  <div id="phase">BAĞLANIYOR</div>
+  <div id="clock">--:--:--</div>
+</div>
+
+<div id="system" class="panel">
+  <h2>Sistem</h2>
+  <div class="gauge" data-key="cpu"><div class="row"><span>İşlemci</span><span class="val">—</span></div><div class="track"><div class="fill"></div></div></div>
+  <div class="gauge" data-key="ram"><div class="row"><span>Bellek</span><span class="val">—</span></div><div class="track"><div class="fill"></div></div></div>
+  <div class="gauge" data-key="gpu"><div class="row"><span>Ekran kartı</span><span class="val">—</span></div><div class="track"><div class="fill"></div></div></div>
+  <div class="gauge" data-key="vram"><div class="row"><span>VRAM</span><span class="val">—</span></div><div class="track"><div class="fill"></div></div></div>
+  <h2 style="margin-top:22px">Mikrofon</h2>
+  <div class="gauge" data-key="mic"><div class="row"><span>Seviye</span><span class="val">—</span></div><div class="track"><div class="fill"></div></div></div>
+</div>
+
+<div id="core" class="panel">
+  <canvas id="reactor"></canvas>
+  <div id="heard"></div>
+  <div id="reply"></div>
+</div>
+
+<div id="activity" class="panel">
+  <h2>Eylemler</h2>
+  <div id="acts"></div>
+</div>
+
+<div id="log" class="panel">
+  <h2>Günlük</h2>
+  <div id="lines"></div>
+</div>
+
+<div id="approval">
+  <div class="box">
+    <h3>ONAY GEREKİYOR</h3>
+    <div id="ap-risk"></div>
+    <div id="ap-detail"></div>
+    <div id="ap-phrase">
+      <label>Bu işlem geri alınamaz. Onaylamak için <b>onaylıyorum</b> yaz:</label>
+      <input id="ap-input" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="buttons">
+      <button id="ap-yes">Onayla</button>
+      <button id="ap-no">Reddet</button>
+      <div id="ap-timer">--</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- durum ----------
+let socket = null, current = null, timerHandle = null;
+let energy = 0, targetEnergy = 0, phase = "";
+
+const el = (id) => document.getElementById(id);
+
+// ---------- saat ----------
+setInterval(() => {
+  el("clock").textContent = new Date().toLocaleTimeString("tr-TR");
+}, 1000);
+
+// ---------- reaktör çizimi ----------
+const canvas = el("reactor"), ctx = canvas.getContext("2d");
+function resize() {
+  const size = canvas.clientWidth * devicePixelRatio;
+  canvas.width = canvas.height = size;
+}
+new ResizeObserver(resize).observe(canvas);
+resize();
+
+let spin = 0;
+function draw() {
+  const w = canvas.width, c = w / 2, R = w * 0.42;
+  ctx.clearRect(0, 0, w, w);
+  energy += (targetEnergy - energy) * 0.08;
+  spin += 0.0035;
+
+  const glow = 0.25 + energy * 0.75;
+
+  // dış halka: kesik yaylar, yavaş dönen
+  ctx.save(); ctx.translate(c, c); ctx.rotate(spin);
+  ctx.strokeStyle = `rgba(79,214,255,${0.30 + glow * 0.35})`;
+  ctx.lineWidth = w * 0.006;
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    ctx.arc(0, 0, R, i * Math.PI / 4 + 0.16, (i + 1) * Math.PI / 4 - 0.16);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // orta halka: ters yönde, çentikli
+  ctx.save(); ctx.translate(c, c); ctx.rotate(-spin * 1.9);
+  ctx.strokeStyle = `rgba(79,214,255,${0.22 + glow * 0.4})`;
+  ctx.lineWidth = w * 0.004;
+  for (let i = 0; i < 48; i++) {
+    const a = i * Math.PI / 24;
+    const len = (i % 4 === 0) ? R * 0.10 : R * 0.045;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * R * 0.80, Math.sin(a) * R * 0.80);
+    ctx.lineTo(Math.cos(a) * (R * 0.80 - len), Math.sin(a) * (R * 0.80 - len));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ses dalgası halkası — enerjiyle deforme olur
+  ctx.save(); ctx.translate(c, c);
+  ctx.beginPath();
+  for (let i = 0; i <= 180; i++) {
+    const a = (i / 180) * Math.PI * 2;
+    const wobble = Math.sin(a * 6 + spin * 22) * energy * R * 0.09
+                 + Math.sin(a * 11 - spin * 15) * energy * R * 0.05;
+    const r = R * 0.58 + wobble;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = `rgba(79,214,255,${0.45 + glow * 0.5})`;
+  ctx.lineWidth = w * 0.005;
+  ctx.shadowBlur = w * 0.05 * glow; ctx.shadowColor = "rgba(79,214,255,0.9)";
+  ctx.stroke();
+  ctx.restore();
+
+  // çekirdek
+  const coreR = R * (0.26 + energy * 0.07);
+  const grad = ctx.createRadialGradient(c, c, 0, c, c, coreR);
+  grad.addColorStop(0, `rgba(220,250,255,${0.85 * glow + 0.15})`);
+  grad.addColorStop(0.45, `rgba(79,214,255,${0.55 * glow})`);
+  grad.addColorStop(1, "rgba(20,80,120,0)");
+  ctx.beginPath(); ctx.arc(c, c, coreR, 0, Math.PI * 2);
+  ctx.fillStyle = grad; ctx.fill();
+
+  targetEnergy *= 0.94;  // yeni veri gelmezse söner
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ---------- olay işleme ----------
+const KINDS = {
+  wake: "UYANDI", heard: "DUYDUM", speak: "YANIT", action: "EYLEM",
+  approval: "ONAY", denied: "RED", error: "HATA", info: "BİLGİ", phase: "DURUM",
+  approval_request: "SORULDU", approval_result: "KARAR",
+};
+
+function addLine(e) {
+  const wrap = el("lines");
+  const div = document.createElement("div");
+  div.className = "line";
+  div.innerHTML = `<span class="ts">${e.ts || ""}</span>`
+    + `<span class="kind k-${e.kind}">${KINDS[e.kind] || e.kind}</span>`
+    + `<span class="msg"></span>`;
+  div.querySelector(".msg").textContent = e.message || "";
+  wrap.appendChild(div);
+  while (wrap.children.length > 300) wrap.removeChild(wrap.firstChild);
+  el("log").scrollTop = el("log").scrollHeight;
+}
+
+function addAct(e) {
+  const wrap = el("acts");
+  const div = document.createElement("div");
+  div.className = "act " + (e.risk || "LOW");
+  div.innerHTML = `<span class="t">${e.ts || ""}</span><span class="n"></span>`;
+  div.querySelector(".n").textContent = (e.tool || "").replace("mcp__desktop__", "");
+  wrap.insertBefore(div, wrap.firstChild);
+  while (wrap.children.length > 40) wrap.removeChild(wrap.lastChild);
+}
+
+function setGauge(key, percent, label) {
+  const gauge = document.querySelector(`.gauge[data-key="${key}"]`);
+  if (!gauge) return;
+  gauge.querySelector(".fill").style.width = Math.min(100, percent) + "%";
+  gauge.querySelector(".fill").classList.toggle("hot", percent > 80);
+  gauge.querySelector(".val").textContent = label;
+}
+
+const PHASES = {
+  dinlemede: "DİNLEMEDE", duyuyor: "DİNLİYOR", dusunuyor: "DÜŞÜNÜYOR",
+  takip: "DEVAM EDİYOR",
+  konusuyor: "KONUŞUYOR", hazirlaniyor: "HAZIRLANIYOR", baslatiliyor: "BAŞLATILIYOR",
+  onay: "ONAY BEKLİYOR", durdu: "DURDU",
+};
+
+function setPhase(p) {
+  phase = p;
+  el("phase").textContent = PHASES[p] || p.toUpperCase();
+  el("phase").classList.toggle("aktif", p !== "dinlemede" && p !== "durdu");
+  if (p === "konusuyor" || p === "dusunuyor") targetEnergy = 0.85;
+}
+
+function handle(e) {
+  switch (e.kind) {
+    case "snapshot":
+      (e.events || []).forEach(handle);
+      if (e.state && e.state.phase) setPhase(e.state.phase);
+      return;
+    case "mic":
+      targetEnergy = Math.max(targetEnergy, Math.min(1, e.level || 0));
+      setGauge("mic", (e.level || 0) * 100, Math.round((e.level || 0) * 100) + "%");
+      return;
+    case "system":
+      if (e.cpu_percent != null) setGauge("cpu", e.cpu_percent, e.cpu_percent + "%");
+      if (e.ram_percent != null) setGauge("ram", e.ram_percent, e.ram_percent + "%");
+      if (e.gpu_percent != null) setGauge("gpu", e.gpu_percent, e.gpu_percent + "%");
+      if (e.vram_used_mb != null)
+        setGauge("vram", 100 * e.vram_used_mb / e.vram_total_mb,
+                 e.vram_used_mb + " / " + e.vram_total_mb + " MB");
+      return;
+    case "phase": setPhase(e.message); return;
+    case "heard": el("heard").textContent = e.message; el("reply").textContent = ""; break;
+    case "speak": el("reply").textContent = e.message; targetEnergy = 0.9; break;
+    case "action": addAct(e); break;
+    case "approval_request": showApproval(e); addLine(e); return;
+    case "approval_result": hideApproval(); break;
+  }
+  addLine(e);
+}
+
+// ---------- onay ----------
+function showApproval(e) {
+  current = e;
+  el("ap-risk").textContent = `RİSK: ${e.risk}   •   ARAÇ: ${e.tool}`;
+  el("ap-detail").textContent = e.detail || "";
+  const needsPhrase = !!e.require_phrase;
+  el("ap-phrase").style.display = needsPhrase ? "block" : "none";
+  el("ap-yes").disabled = needsPhrase;
+  el("ap-input").value = "";
+  el("approval").classList.add("show");
+  setPhase("onay");
+  if (needsPhrase) setTimeout(() => el("ap-input").focus(), 60);
+
+  let left = e.timeout_sec || 60;
+  el("ap-timer").textContent = left;
+  clearInterval(timerHandle);
+  timerHandle = setInterval(() => {
+    left -= 1;
+    el("ap-timer").textContent = Math.max(0, left);
+    if (left <= 0) { clearInterval(timerHandle); hideApproval(); }
+  }, 1000);
+}
+
+function hideApproval() {
+  clearInterval(timerHandle);
+  el("approval").classList.remove("show");
+  current = null;
+}
+
+function respond(approved) {
+  if (!current) return;
+  socket.send(JSON.stringify({ type: "approval", id: current.id, approved }));
+  hideApproval();
+}
+
+el("ap-yes").onclick = () => respond(true);
+el("ap-no").onclick = () => respond(false);
+el("ap-input").oninput = (ev) => {
+  el("ap-yes").disabled =
+    ev.target.value.trim().toLocaleLowerCase("tr") !== (current?.require_phrase || "").toLocaleLowerCase("tr");
+};
+el("ap-input").onkeydown = (ev) => {
+  if (ev.key === "Enter" && !el("ap-yes").disabled) respond(true);
+};
+document.addEventListener("keydown", (ev) => {
+  if (!current) return;
+  if (ev.key === "Escape") respond(false);
+  if (ev.key === "Enter" && !current.require_phrase) respond(true);
+});
+
+// ---------- bağlantı ----------
+function connect() {
+  socket = new WebSocket(`ws://${location.host}/ws`);
+  socket.onopen = () => { el("conn").style.background = "var(--ok)"; };
+  socket.onmessage = (ev) => handle(JSON.parse(ev.data));
+  socket.onclose = () => {
+    el("conn").style.background = "var(--danger)";
+    setPhase("durdu");
+    setTimeout(connect, 1500);
+  };
+}
+connect();
+</script>
+</body>
+</html>
